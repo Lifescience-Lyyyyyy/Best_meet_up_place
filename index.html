@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网友面基·天命之城计算器</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4 md:p-8 font-sans">
+    <div id="app" class="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">🚄 网友面基·天命之城计算器</h1>
+        
+        <div class="mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg text-center bg-gray-50">
+            <label class="block text-sm font-medium text-gray-700 mb-2">📥 请上传生成的 travel_time_matrix_en.csv</label>
+            <input type="file" @change="handleFileUpload" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+        </div>
+
+        <div class="space-y-4 bg-gray-50 p-4 rounded-lg mb-6 border" v-if="cities.length > 0">
+            <div>
+                <label class="flex justify-between text-sm font-medium text-gray-700">
+                    <span>⏳ 效率权重 (总耗时最短)</span>
+                    <span class="text-blue-600 font-bold">{{ alpha.toFixed(1) }}</span>
+                </label>
+                <input type="range" v-model.number="alpha" min="0" max="3" step="0.1" class="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer mt-2">
+            </div>
+            <div>
+                <label class="flex justify-between text-sm font-medium text-gray-700">
+                    <span>⚖️ 公平权重 (路程尽量平均)</span>
+                    <span class="text-green-600 font-bold">{{ beta.toFixed(1) }}</span>
+                </label>
+                <input type="range" v-model.number="beta" min="0" max="3" step="0.1" class="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer mt-2">
+            </div>
+            <div>
+                <label class="flex justify-between text-sm font-medium text-gray-700">
+                    <span>🌆 繁华权重 (吃喝玩乐体验)</span>
+                    <span class="text-purple-600 font-bold">{{ gamma.toFixed(1) }}</span>
+                </label>
+                <input type="range" v-model.number="gamma" min="0" max="3" step="0.1" class="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer mt-2">
+            </div>
+        </div>
+
+        <div v-if="cities.length > 0">
+            <h2 class="text-lg font-bold text-gray-800 mb-4">🏆 推荐城市排行榜 (Top 10)</h2>
+            <div class="space-y-3">
+                <div v-for="(city, index) in sortedCities.slice(0, 10)" :key="city.name" 
+                     class="flex items-center p-3 rounded-lg transition-all duration-500"
+                     :class="index === 0 ? 'bg-yellow-100 border-yellow-400 border-2' : (index < 3 ? 'bg-gray-50 border' : 'bg-white border')">
+                    <div class="w-8 font-bold" :class="index === 0 ? 'text-xl text-yellow-600' : 'text-gray-500'">#{{ index + 1 }}</div>
+                    <div class="flex-1">
+                        <div class="font-bold text-gray-800 text-lg">{{ city.name }}</div>
+                        <div class="text-xs text-gray-500 flex gap-3 mt-1">
+                            <span>所有人总耗时: {{ city.time }}h</span>
+                            <span>公平方差: {{ city.var }}</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-500">综合得分</div>
+                        <div class="font-mono font-bold" :class="city.score < 0 ? 'text-green-600' : 'text-red-500'">
+                            {{ city.score.toFixed(3) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div v-else class="text-center text-gray-400 py-10">
+            请先上传 CSV 文件以查看排名结果...
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return { alpha: 1.0, beta: 1.5, gamma: 0.8, cities: [] }
+            },
+            computed: {
+                sortedCities() {
+                    if (this.cities.length === 0) return [];
+                    const times = this.cities.map(c => c.time);
+                    const vars = this.cities.map(c => c.var);
+                    const minTime = Math.min(...times), maxTime = Math.max(...times);
+                    const minVar = Math.min(...vars), maxVar = Math.max(...vars);
+
+                    let results = this.cities.map(city => {
+                        const normTime = (city.time - minTime) / (maxTime - minTime || 1);
+                        const normVar = (city.var - minVar) / (maxVar - minVar || 1);
+                        const score = (this.alpha * normTime) + (this.beta * normVar) - (this.gamma * city.hub);
+                        return { ...city, score };
+                    });
+                    return results.sort((a, b) => a.score - b.score);
+                }
+            },
+            methods: {
+                getHubWeight(city) {
+                    const tier1 = ["Beijing", "Shanghai", "Guangzhou", "Shenzhen"];
+                    const tierNew1 = ["Chengdu", "Chongqing", "Hangzhou", "Wuhan", "Xi'an", "Zhengzhou", "Changsha", "Tianjin", "Suzhou", "Nanjing"];
+                    if (tier1.includes(city)) return 1.0;
+                    if (tierNew1.includes(city)) return 0.85;
+                    const tier2 = ["Qingdao", "Dongguan", "Ningbo", "Hefei", "Jinan", "Xiamen", "Kunming", "Fuzhou"];
+                    if (tier2.includes(city)) return 0.7;
+                    return 0.5;
+                },
+                handleFileUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.parseCSV(e.target.result);
+                    };
+                    reader.readAsText(file);
+                },
+                parseCSV(text) {
+                    const lines = text.trim().split('\n');
+                    const headers = lines[0].split(',').map(s => s.trim().replace(/"/g, ''));
+                    const candidateCities = headers.slice(1);
+                    
+                    const matrix = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        if (!lines[i].trim()) continue;
+                        const cols = lines[i].split(',');
+                        matrix.push(cols.slice(1).map(Number));
+                    }
+                    
+                    this.cities = candidateCities.map((city, colIndex) => {
+                        let times = [];
+                        for(let i=0; i<matrix.length; i++) {
+                            times.push(matrix[i][colIndex]);
+                        }
+                        const sumTime = times.reduce((a,b)=>a+b, 0);
+                        const meanTime = sumTime / times.length;
+                        const variance = times.reduce((a,b)=>a + Math.pow(b - meanTime, 2), 0) / times.length;
+                        
+                        return { 
+                            name: city, 
+                            time: parseFloat(sumTime.toFixed(2)), 
+                            var: parseFloat(variance.toFixed(2)), 
+                            hub: this.getHubWeight(city) 
+                        };
+                    });
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

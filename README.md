@@ -89,6 +89,3 @@ python visualize.py
 
 MIT License. 自由使用，欢迎 Fork 并邀请你的网友们一起测试！
 
-```
-
-```

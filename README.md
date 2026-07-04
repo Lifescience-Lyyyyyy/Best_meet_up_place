@@ -1,5 +1,5 @@
 # Best_meet_up_place
-```markdown
+
 # 🚄 网友面基·天命之城计算器 (Meetup City Optimizer)
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
@@ -58,7 +58,7 @@ python fetch_matrix.py
 
 ### 3. 可视化与决策
 
-**方案 A：生成专业分析图表 (用于汇报/发群装逼)**
+**方案 A：生成专业分析图表 (用于汇报)**
 运行绘图脚本，它将自动读取刚才生成的 CSV 文件，并输出一张极具专业感的分析图 `meetup_final_decision.png`。
 
 ```bash
